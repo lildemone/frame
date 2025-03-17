@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MOB CUSTOMS - Custom Services">
+    <title>MOB CUSTOMS</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+        }
+        .header {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            background-color: #222121;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            color: #f7f4f4;
+            margin-left: 10px;
+        }
+        .header img {
+            max-width: 200px;
+            height: 200px;
+        }
+        .nav {
+            width: 100%;
+            background-color: #141414;
+            overflow: hidden;
+        }
+        .nav a {
+            float: left;
+            display: block;
+            color: #f2f2f2;
+            text-align: center;
+            padding: 14px 16px;
+            text-decoration: none;
+        }
+        .nav a:hover {
+            background-color: #9e0202;
+            color: rgb(19, 19, 19);
+        }
+        .main {
+            display: flex;
+            width: 100%;
+            margin-top: 20px;
+        }
+        .menu {
+            width: 20%;
+            border-right: 1px solid #ccc;
+            transition: width 0.3s;
+        }
+        .menu.collapsed {
+            width: 50px;
+        }
+        .content {
+            width: 80%;
+            transition: width 0.3s;
+        }
+        .content.expanded {
+            width: calc(100% - 50px);
+        }
+        .footer {
+            width: 100%;
+            background-color: #1a1919;
+            color: #fdfdfd;
+            text-align: center;
+            padding: 10px 0;
+            position: fixed;
+            bottom: 0;
+        }
+        .toggle-button {
+            position: menu;
+            top: 20px;
+            left: 20px;
+            background-color: #333;
+            color: #fff;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            z-index: 1000;
+        }
+        @media (max-width: 768px) {
+            .menu {
+                width: 100%;
+                height: auto;
+                border-right: none;
+            }
+            .content {
+                width: 100%;
+            }
+            .nav a {
+                float: none;
+                width: 100%;
+                text-align: left;
+                padding: 10px;
+            }
+        }
+    </style>
+    <script>
+        function toggleMenu() {
+            var menu = document.querySelector('.menu');
+            var content = document.querySelector('.content');
+            menu.classList.toggle('collapsed');
+            content.classList.toggle('expanded');
+        }
+    </script>
+</head>
+<body>
+    <div class="header">
+        <img src="C:\Users\ADMIN\Desktop\vscode101\web page 1\frame\mob logo.jpg" alt="MOB CUSTOMS">
+        <h1>MOB CUSTOMS</h1>
+    </div>
+    <div class="nav">
+        <a href="frame_content.html" target="content">Home</a>
+        <a href="frame_about.html" target="content">About</a>
+        <a href="frame_services.html" target="content">Services</a>
+        <a href="frame_contacts.html" target="content">Contact</a>
+    </div>
+    <button class="toggle-button" onclick="toggleMenu()">☰</button>
+    <div class="main">
+        <div class="menu">
+            <iframe id="menuFrame" src="frame_menu.html" name="menu" style="width: 100%; height: 100vh; border: none;"></iframe>
+        </div>
+        <div class="content">
+            <iframe src="frame_content.html" name="content" style="width: 100%; height: 100vh; border: none;"></iframe>
+        </div>
+    </div>
+    <div class="footer">
+        <p>&copy; 2025 MOB CUSTOMS. All rights reserved.</p>
+    </div>
+</body>
+</html>

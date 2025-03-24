@@ -60,14 +60,15 @@
             transition: width 0.3s;
         }
         .menu.collapsed {
-            width: 50px;
+            width: 0;
+            overflow: hidden;
         }
         .content {
             width: 80%;
             transition: width 0.3s;
         }
         .content.expanded {
-            width: calc(100% - 50px);
+            width: 100%;
         }
         .footer {
             width: 100%;
@@ -79,7 +80,7 @@
             bottom: 0;
         }
         .toggle-button {
-            position: menu;
+            position: absolute;
             top: 20px;
             left: 20px;
             background-color: #333;

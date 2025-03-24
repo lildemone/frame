@@ -11,6 +11,7 @@
             padding: 20px;
             background-color: #1b1b1b;
             color: #fafafa;
+            transition: margin-left 0.3s;
         }
         h1 {
             color: #f3efef;
@@ -55,36 +56,58 @@
             background-color: #9e0303;
             color: #fff;
         }
-        /* Hide scrollbar for all elements */
-        * {
+        .menu-container {
+            position: relative;
+            transition: width 0.3s;
+        }
+        .menu-container.collapsed {
+            width: 0;
             overflow: hidden;
         }
-
-        /* Hide scrollbar for specific element */
-        .specific-element {
-            overflow: hidden;
+        .toggle-menu-button {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: #333;
+            color: #fff;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            z-index: 1000;
+            border-radius: 4px;
+        }
+        .toggle-menu-button:hover {
+            background-color: #9e0303;
         }
     </style>
 </head>
 <body>
-    <h1>Menu</h1>
-    <ul id="menu">
-        <li><a href="frame_content.html" target="content">&#127968; <span class="link-text">Home</span></a></li>
-        <li><a href="frame_about.html" target="content">&#128100; <span class="link-text">About</span></a></li>
-        <li><a href="frame_services.html" target="content">&#128736; <span class="link-text">Services</span></a></li>
-        <li><a href="frame_bodykits.html" target="content">&#128663; <span class="link-text">Body kits</span></a></li>
-        <li><a href="frame_paintjobs.html" target="content">&#127912; <span class="link-text">Paint jobs</span></a></li>
-        <li><a href="frame_enginetuning&performance.html" target="content">&#128295; <span class="link-text">Engine tuning & Performance</span></a></li>
-        <li><a href="frame_suspensions.html" target="content">&#9889; <span class="link-text">Suspensions</span></a></li>
-        <li><a href="frame_wheels.html" target="content">&#128690; <span class="link-text">Wheels</span></a></li>
-        <li><a href="frame_interior.html" target="content">&#128719; <span class="link-text">Interior</span></a></li>
-        <li><a href="frame_electronics.html" target="content">&#128267; <span class="link-text">Electronics</span></a></li>
-        <li><a href="frame_accessories.html" target="content">&#128722; <span class="link-text">Accessories</span></a></li>
-        <li><a href="frame_soundsystem.html" target="content">&#127911; <span class="link-text">Sound system</span></a></li>
-    </ul>
-    <div class="back-toggle">
-        <a href="javascript:history.back()">&#8592; Back</a>
+    <div class="menu-container" id="menuContainer">
+        <button class="toggle-menu-button" onclick="toggleMenu()">☰</button>
+        <h1>Menu</h1>
+        <ul id="menu">
+            <li><a href="frame_content.html" target="content">&#127968; <span class="link-text">Home</span></a></li>
+            <li><a href="frame_about.html" target="content">&#128100; <span class="link-text">About</span></a></li>
+            <li><a href="frame_services.html" target="content">&#128736; <span class="link-text">Services</span></a></li>
+            <li><a href="frame_bodykits.html" target="content">&#128663; <span class="link-text">Body kits</span></a></li>
+            <li><a href="frame_paintjobs.html" target="content">&#127912; <span class="link-text">Paint jobs</span></a></li>
+            <li><a href="frame_enginetuning&performance.html" target="content">&#128295; <span class="link-text">Engine tuning & Performance</span></a></li>
+            <li><a href="frame_suspensions.html" target="content">&#9889; <span class="link-text">Suspensions</span></a></li>
+            <li><a href="frame_wheels.html" target="content">&#128690; <span class="link-text">Wheels</span></a></li>
+            <li><a href="frame_interior.html" target="content">&#128719; <span class="link-text">Interior</span></a></li>
+            <li><a href="frame_electronics.html" target="content">&#128267; <span class="link-text">Electronics</span></a></li>
+            <li><a href="frame_accessories.html" target="content">&#128722; <span class="link-text">Accessories</span></a></li>
+            <li><a href="frame_soundsystem.html" target="content">&#127911; <span class="link-text">Sound system</span></a></li>
+        </ul>
+        <div class="back-toggle">
+            <a href="javascript:history.back()">&#8592; Back</a>
+        </div>
     </div>
-    <!-- <script src="frame.js"></script> -->
+    <script>
+        function toggleMenu() {
+            const menuContainer = document.getElementById('menuContainer');
+            menuContainer.classList.toggle('collapsed');
+        }
+    </script>
 </body>
 </html>

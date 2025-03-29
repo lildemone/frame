@@ -111,8 +111,10 @@
         function toggleMenu() {
             var menu = document.querySelector('.menu');
             var content = document.querySelector('.content');
+            var toggleButton = document.querySelector('.toggle-button');
             menu.classList.toggle('collapsed');
             content.classList.toggle('expanded');
+            toggleButton.textContent = menu.classList.contains('collapsed') ? '☰' : '✖';
         }
     </script>
 </head>

@@ -18,9 +18,12 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 10px;
+            padding: 7px; /* Reduced padding by 30% */
             background-color: #222121;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            position: fixed; /* Make the header fixed */
+            top: 0;
+            z-index: 1000;
         }
         .header h1 {
             margin: 0;
@@ -29,8 +32,8 @@
             margin-left: 10px;
         }
         .header img {
-            max-width: 200px;
-            height: 200px;
+            max-width: 140px; /* Reduced max-width by 30% */
+            height: 140px; /* Reduced height by 30% */
         }
         .nav {
             width: 100%;
@@ -52,15 +55,17 @@
         .main {
             display: flex;
             width: 100%;
-            margin-top: 20px;
+            margin-top: 80px; /* Add margin to account for the fixed header */
         }
         .menu {
             width: 20%;
             border-right: 1px solid #ccc;
-            transition: width 0.3s;
+            transition: width 0.3s ease, opacity 0.3s ease;
+            opacity: 1;
         }
         .menu.collapsed {
             width: 0;
+            opacity: 0;
             overflow: hidden;
         }
         .content {
@@ -76,7 +81,7 @@
             color: #fdfdfd;
             text-align: center;
             padding: 10px 0;
-            position: fixed;
+            position: mobile;
             bottom: 0;
         }
         .toggle-button {
@@ -120,7 +125,7 @@
 </head>
 <body>
     <div class="header">
-        <img src="C:\Users\ADMIN\Desktop\vscode101\web page 1\frame\mob logo.jpg" alt="MOB CUSTOMS">
+        <img src="C:\Users\ADMIN\Downloads\vscode101\web page 1\frame\frame\mob logo.jpg">
         <h1>MOB CUSTOMS</h1>
     </div>
     <div class="nav">

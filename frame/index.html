@@ -5,63 +5,83 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="MOB CUSTOMS - Custom Services">
     <title>MOB CUSTOMS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap" rel="stylesheet"> <!-- Add graffiti-style font -->
     <style>
         body {
             display: flex;
             flex-direction: column;
             margin: 0;
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
+            font-family: 'Roboto', Arial, sans-serif; /* Updated font for modern look */
+            background-color: #eaeaea; /* Softer background color */
         }
         .header {
             width: 100%;
             display: flex;
             align-items: center;
-            justify-content: center;
-            padding: 7px; /* Reduced padding by 30% */
-            background-color: #222121;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            position: fixed; /* Make the header fixed */
+            justify-content: space-between; /* Space between logo and title */
+            padding: 10px 20px; /* Adjusted padding for better spacing */
+            background-color: #1f1f1f; /* Darker header for contrast */
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); /* Enhanced shadow for depth */
+            position: fixed;
             top: 0;
             z-index: 1000;
         }
         .header h1 {
             margin: 0;
-            font-size: 24px;
-            color: #f7f4f4;
-            margin-left: 10px;
+            font-size: 50px; /* Slightly smaller font size */
+            color: #ffffff;
+            position: absolute; /* Position title absolutely */
+            left: 50%; /* Move to the center horizontally */
+            transform: translateX(-50%); /* Adjust for centering */
+            font-family: 'Permanent Marker', cursive; /* Apply graffiti-style font */
         }
         .header img {
-            max-width: 140px; /* Reduced max-width by 30% */
-            height: 140px; /* Reduced height by 30% */
+            max-width: 120px; /* Adjusted size for better balance */
+            height: auto;
+            margin-bottom: 5px; /* Reduced spacing by 50% */
         }
         .nav {
             width: 100%;
-            background-color: #141414;
+            background-color: #333333;
             overflow: hidden;
+            display: flex;
+            justify-content: center; /* Center navigation links */
+            padding: 10px 0;
         }
         .nav a {
-            float: left;
-            display: block;
-            color: #f2f2f2;
+            color: #ffffff;
             text-align: center;
-            padding: 14px 16px;
+            padding: 10px 15px;
             text-decoration: none;
+            font-size: 16px;
+            transition: background-color 0.3s, color 0.3s; /* Smooth hover effect */
         }
         .nav a:hover {
-            background-color: #9e0202;
-            color: rgb(19, 19, 19);
+            background-color: #ff5722; /* Bright hover color */
+            color: #ffffff;
         }
         .main {
             display: flex;
-            width: 100%;
-            margin-top: 80px; /* Add margin to account for the fixed header */
+            flex-direction: column;
+            align-items: center; /* Center horizontally */
+            justify-content: center; /* Center vertically */
+            width: 75%; /* Adjust width to fill the remaining space */
+            height: calc(100vh - 140px); /* Adjust height to exclude header and footer */
+            margin-top: 140px; /* Adjusted for fixed header */
+            margin-left: 25%; /* Adjust content to account for the fixed menu */
+            padding: 10px;
         }
         .menu {
-            width: 20%;
+            position: fixed; /* Fix the menu to the left */
+            left: 0; /* Align it to the left edge */
+            top: 140px; /* Position it below the header */
+            height: calc(100vh - 140px); /* Adjust height to exclude header */
+            width: 25%; /* Maintain the width */
             border-right: 1px solid #ccc;
             transition: width 0.3s ease, opacity 0.3s ease;
             opacity: 1;
+            background-color: #ffffff; /* Add background color for better visibility */
+            overflow-y: auto; /* Enable vertical scrolling */
         }
         .menu.collapsed {
             width: 0;
@@ -69,31 +89,42 @@
             overflow: hidden;
         }
         .content {
-            width: 80%;
+            width: 75%; /* Adjusted content width */
+            max-width: 800px; /* Limit maximum width for better readability */
             transition: width 0.3s;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Add shadow for better visibility */
+            background-color: #ffffff; /* Add background color */
+            border-radius: 8px; /* Rounded corners */
+            padding: 20px; /* Add padding inside the content */
         }
         .content.expanded {
             width: 100%;
         }
         .footer {
             width: 100%;
-            background-color: #1a1919;
-            color: #fdfdfd;
+            background-color: #faf3f3;
+            color: #0e0d0d;
             text-align: center;
-            padding: 10px 0;
-            position: mobile;
+            padding: 15px 0; /* Increased padding for better spacing */
+            position: fixed;
             bottom: 0;
+            visibility: hidden; /* Make the footer invisible */
         }
         .toggle-button {
             position: absolute;
-            top: 20px;
-            left: 20px;
-            background-color: #333;
-            color: #fff;
+            top: 15px;
+            left: 15px;
+            background-color: #ff5722; /* Bright button color */
+            color: #ffffff;
             border: none;
-            padding: 10px;
+            padding: 10px 15px;
             cursor: pointer;
+            border-radius: 5px; /* Rounded corners */
             z-index: 1000;
+            transition: background-color 0.3s; /* Smooth hover effect */
+        }
+        .toggle-button:hover {
+            background-color: #e64a19; /* Darker hover color */
         }
         @media (max-width: 768px) {
             .menu {
@@ -104,11 +135,20 @@
             .content {
                 width: 100%;
             }
+            .nav {
+                flex-direction: column; /* Stack nav links vertically */
+            }
             .nav a {
-                float: none;
                 width: 100%;
                 text-align: left;
-                padding: 10px;
+                padding: 10px 20px;
+            }
+            .header {
+                flex-direction: column; /* Stack logo and title vertically */
+                align-items: center;
+            }
+            .header img {
+                margin-bottom: 10px; /* Add spacing below logo */
             }
         }
     </style>
@@ -137,7 +177,7 @@
     <button class="toggle-button" onclick="toggleMenu()">☰</button>
     <div class="main">
         <div class="menu">
-            <iframe id="menuFrame" src="frame_menu.html" name="menu" style="width: 100%; height: 100vh; border: none;"></iframe>
+            <iframe id="menuFrame" src="frame_menu.html" name="menu" style="width: 100%; height: 100vh; border: none;" scrolling="no"></iframe>
         </div>
         <div class="content">
             <iframe src="frame_content.html" name="content" style="width: 100%; height: 100vh; border: none;"></iframe>

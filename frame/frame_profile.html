@@ -45,13 +45,20 @@
 <body>
     <div class="profile-container">
         <h1>Welcome to Your Profile</h1>
-        <p>Here is your account information.</p>
+        <p>
+            
+        </p>
         <button onclick="logout()">Logout</button>
     </div>
     <script>
         function logout() {
             localStorage.setItem('isLoggedIn', 'false'); // Clear login status
             window.location.href = 'frame_login.html'; // Redirect to login
+            updateNavBar(); // Update navigation bar
+        }
+
+        function updateNavBar() {
+            // Logic to update the navigation bar
         }
     </script>
 </body>

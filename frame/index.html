@@ -219,14 +219,23 @@
 
         function updateAccountTab() {
             const accountTab = document.getElementById('accountTab');
+            const logoutButton = document.getElementById('logoutButton');
             const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true'; // Check login status
             if (isLoggedIn) {
                 accountTab.textContent = 'Profile';
                 accountTab.href = 'frame_profile.html'; // Redirect to profile
+                logoutButton.style.display = 'inline-block'; // Show logout button
             } else {
                 accountTab.textContent = 'Account';
                 accountTab.href = 'frame_login.html'; // Redirect to login/sign-up
+                logoutButton.style.display = 'none'; // Hide logout button
             }
+        }
+
+        function logout() {
+            localStorage.setItem('isLoggedIn', 'false'); // Clear login status
+            updateAccountTab(); // Update navigation bar
+            window.location.href = 'frame_login.html'; // Redirect to login
         }
 
         document.addEventListener('DOMContentLoaded', updateAccountTab); // Update tab on page load
@@ -244,6 +253,7 @@
         <a href="frame_services.html" target="content">Services</a>
         <a href="frame_contacts.html" target="content">Contact</a>
         <a id="accountTab" href="frame_login.html" target="content">Account</a> <!-- Single dynamic tab -->
+        <button id="logoutButton" onclick="logout()" style="display: none; margin-left: 10px; background-color: #ff5722; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 5px;">Logout</button> <!-- Logout button -->
     </div>
     <button class="toggle-button" onclick="toggleMenu()">☰</button>
     <div class="main">
@@ -255,6 +265,9 @@
         </div>
         <div class="content">
             <iframe src="frame_content.html" name="content" style="width: 100%; height: 100vh; border: none;"></iframe>
+            <div id="noAccountMessage" style="text-align: center; margin-top: 20px;">
+                <p>If you don't have an account, please <a href="frame_signup.html" target="content">Sign Up</a> or <a href="frame_login.html" target="content">Login</a>.</p>
+            </div> <!-- Added conditional message -->
         </div>
     </div>
     <div class="footer">

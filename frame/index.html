@@ -19,7 +19,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between; /* Space between logo and title */
-            padding: 10px 20px; /* Adjusted padding for better spacing */
+            padding: 15px 20px; /* Increased padding for better spacing */
             background-color: #1f1f1f; /* Darker header for contrast */
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); /* Enhanced shadow for depth */
             position: fixed;
@@ -28,7 +28,7 @@
         }
         .header h1 {
             margin: 0;
-            font-size: 50px; /* Slightly smaller font size */
+            font-size: 60px; /* Increased font size for better visibility */
             color: #ffffff;
             position: absolute; /* Position title absolutely */
             left: 50%; /* Move to the center horizontally */
@@ -39,6 +39,17 @@
             max-width: 120px; /* Adjusted size for better balance */
             height: auto;
             margin-bottom: 5px; /* Reduced spacing by 50% */
+        }
+        .header p {
+            margin: 0;
+            font-size: 18px; /* Font size for the phrase */
+            color: #ffffff;
+            text-align: center; /* Center align the phrase */
+            position: absolute; /* Position it absolutely */
+            left: 50%; /* Center horizontally */
+            transform: translateX(-50%); /* Adjust for centering */
+            top: 110px; /* Increased spacing below the title */
+            font-family: 'Permanent Marker', cursive; /* Apply graffiti-style font */
         }
         .nav {
             width: 100%;
@@ -167,6 +178,7 @@
     <div class="header">
         <img src="C:\Users\ADMIN\Downloads\vscode101\web page 1\frame\frame\mob logo.jpg">
         <h1>MOB CUSTOMS</h1>
+        <p>Confidence in Motion</p>
     </div>
     <div class="nav">
         <a href="frame_content.html" target="content">Home</a>

@@ -57,6 +57,26 @@
             text-align: center;
             margin-bottom: 10px;
         }
+        .oauth-buttons {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .google-signin-button,
+        .apple-signin-button {
+            display: inline-block;
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+        .google-signin-button {
+            background-color: #4285f4;
+        }
+        .apple-signin-button {
+            background-color: #000;
+        }
     </style>
 </head>
 <body>
@@ -72,6 +92,10 @@
             <input type="text" name="phone" placeholder="Phone Number" required>
             <button type="submit">Create Account</button>
         </form>
+        <div class="oauth-buttons">
+            <a href="/auth/google" class="google-signin-button">Sign in with Google</a>
+            <a href="/auth/apple" class="apple-signin-button">Sign in with Apple</a>
+        </div>
     </div>
     <script>
         document.getElementById('signupForm').addEventListener('submit', async function(event) {
@@ -127,11 +151,14 @@
                     body: JSON.stringify({ email, username, password, phone }),
                 });
 
-                if (response.ok) {
-                    window.location.href = 'frame_profile.html'; // Redirect to profile
-                } else {
+                if (!response.ok) {
                     const errorData = await response.json();
                     errorContainer.textContent = errorData.message || 'An error occurred. Please try again.';
+                    return;
+                }
+
+                if (response.ok) {
+                    window.location.href = 'frame_profile.html'; // Redirect to profile
                 }
             } catch (error) {
                 console.error('Error during signup:', error);
@@ -143,177 +170,65 @@
 </html>
 
 <script>
+    require('dotenv').config();
     const express = require('express');
-    const app = express();
     const bodyParser = require('body-parser');
     const bcrypt = require('bcrypt');
-    const { body, validationResult } = require('express-validator');
     const csrf = require('csurf');
-    const csrfProtection = csrf({ cookie: true });
     const jwt = require('jsonwebtoken');
     const rateLimit = require('express-rate-limit');
     const helmet = require('helmet');
     const mongoose = require('mongoose');
     const nodemailer = require('nodemailer');
+    const passport = require('passport');
+    const GoogleStrategy = require('passport-google-oauth20').Strategy;
+    const AppleStrategy = require('passport-apple');
+    const session = require('express-session');
 
-    const userSchema = new mongoose.Schema({
-        email: { type: String, required: true, unique: true },
-        username: { type: String, required: true },
-        password: { type: String, required: true },
-        phone: { type: String, required: true },
-        lastPasswordChange: { type: Date, default: Date.now },
-        isVerified: { type: Boolean, default: false },
-    });
+    const app = express();
+    const csrfProtection = csrf({ cookie: true });
 
-    const User = mongoose.model('User', userSchema);
-
-    const tokenBlacklistSchema = new mongoose.Schema({
-        token: { type: String, required: true },
-        createdAt: { type: Date, default: Date.now },
-    });
-
-    const TokenBlacklist = mongoose.model('TokenBlacklist', tokenBlacklistSchema);
-
+    // Middleware
     app.use(helmet());
-
-    const signupLimiter = rateLimit({
-        windowMs: 15 * 60 * 1000, // 15 minutes
-        max: 5, // Limit each IP to 5 requests per windowMs
-        message: 'Too many signup attempts from this IP, please try again later',
-    });
-
     app.use(bodyParser.json());
     app.use(csrfProtection);
+    app.use(session({
+        secret: process.env.SESSION_SECRET,
+        resave: false,
+        saveUninitialized: false,
+        cookie: { secure: true, httpOnly: true, sameSite: 'Strict' },
+    }));
+    app.use(passport.initialize());
+    app.use(passport.session());
 
-    app.use((req, res, next) => {
-        if (req.headers['x-forwarded-proto'] !== 'https') {
-            return res.redirect(`https://${req.headers.host}${req.url}`);
-        }
-        next();
-    });
+    // MongoDB Connection
+    mongoose.connect(process.env.MONGO_URI, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+        useCreateIndex: true,
+    }).then(() => console.log('Connected to MongoDB'))
+      .catch((error) => console.error('MongoDB connection error:', error));
 
-    const sendVerificationEmail = async (email, token) => {
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS,
-            },
-        });
+    // Routes and Logic (as shown in previous sections)
 
-        const verificationLink = `https://yourdomain.com/verify-email?token=${token}`;
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: email,
-            subject: 'Verify Your Email',
-            text: `Click the link to verify your email: ${verificationLink}`,
-        };
-
-        await transporter.sendMail(mailOptions);
-    };
-
-    const isPasswordExpired = (lastPasswordChange) => {
-        const expirationPeriod = 90 * 24 * 60 * 60 * 1000; // 90 days
-        return Date.now() - new Date(lastPasswordChange).getTime() > expirationPeriod;
-    };
-
-    const isTokenRevoked = async (token) => {
-        // Check if the token is in the blacklist
-        const blacklistedToken = await TokenBlacklist.findOne({ token });
-        return !!blacklistedToken;
-    };
-
-    app.get('/signup', (req, res) => {
-        res.render('signup', { csrfToken: req.csrfToken() });
-    });
-
-    app.post(
-        '/api/signup',
-        signupLimiter,
-        csrfProtection,
-        [
-            body('email').isEmail().normalizeEmail().withMessage('Invalid email address'),
-            body('username').isLength({ min: 3 }).trim().escape().withMessage('Username must be at least 3 characters long'),
-            body('password')
-                .isLength({ min: 8 })
-                .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/)
-                .withMessage('Password must include uppercase, lowercase, number, and special character'),
-            body('phone').matches(/^[0-9]{10,15}$/).trim().escape().withMessage('Phone number must be 10-15 digits'),
-        ],
-        async (req, res) => {
-            const errors = validationResult(req);
-            if (!errors.isEmpty()) {
-                console.error('Validation errors:', errors.array());
-                return res.status(400).json({ message: 'Invalid input. Please check your data.' });
-            }
-
-            const { email, username, password, phone } = req.body;
-
-            try {
-                // Hash the password
-                const hashedPassword = await bcrypt.hash(password, 10);
-
-                // Save user to the database
-                const user = new User({ email, username, password: hashedPassword, phone });
-                await user.save();
-
-                // Send verification email
-                const verificationToken = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: '1h' });
-                await sendVerificationEmail(email, verificationToken);
-
-                res.status(201).json({ message: 'User created successfully. Please verify your email.' });
-            } catch (error) {
-                console.error('Error during signup:', error);
-                res.status(500).json({ message: 'An error occurred. Please try again.' });
-            }
-        }
-    );
-
-    app.post('/api/login', async (req, res) => {
-        const { email, password } = req.body;
-
-        try {
-            const user = await User.findOne({ email });
-            if (!user) {
-                return res.status(404).json({ message: 'User not found.' });
-            }
-
-            if (!user.isVerified) {
-                return res.status(403).json({ message: 'Please verify your email before logging in.' });
-            }
-
-            const isPasswordValid = await bcrypt.compare(password, user.password);
-            if (!isPasswordValid) {
-                return res.status(401).json({ message: 'Invalid password.' });
-            }
-
-            const token = jwt.sign({ email: user.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
-            const refreshToken = jwt.sign({ email }, process.env.REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
-
-            if (await isTokenRevoked(token)) {
-                return res.status(401).json({ message: 'Token is invalid or expired' });
-            }
-
-            res.cookie('refreshToken', refreshToken, {
-                httpOnly: true,
-                secure: true,
-                sameSite: 'Strict',
-            });
-            res.status(200).json({ token });
-        } catch (error) {
-            console.error('Error during login:', error);
-            res.status(500).json({ message: 'An error occurred. Please try again.' });
-        }
-    });
-
-    app.post('/api/logout', (req, res) => {
-        res.clearCookie('sessionToken');
-        res.clearCookie('refreshToken');
-        res.status(200).json({ message: 'Logged out successfully' });
-    });
-
+    // Start Server
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
         console.log(`Server is running on port ${PORT}`);
     });
+</script>
+
+<script>
+    GOOGLE_CLIENT_ID=your-google-client-id
+    GOOGLE_CLIENT_SECRET=your-google-client-secret
+    APPLE_CLIENT_ID=your-apple-client-id
+    APPLE_TEAM_ID=your-apple-team-id
+    APPLE_KEY_ID=your-apple-key-id
+    APPLE_PRIVATE_KEY=your-apple-private-key
+    JWT_SECRET=your-jwt-secret
+    REFRESH_TOKEN_SECRET=your-refresh-token-secret
+    EMAIL_USER=your-email@example.com
+    EMAIL_PASS=your-email-password
+    SESSION_SECRET=your-session-secret
+    MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/your-database
 </script>

@@ -98,6 +98,19 @@
         </div>
     </div>
     <script>
+
+const winston = require('winston');
+require('dotenv').config();
+
+        const logger = winston.createLogger({
+            level: 'info',
+            format: winston.format.json(),
+            transports: [
+                new winston.transports.File({ filename: 'error.log', level: 'error' }),
+                new winston.transports.File({ filename: 'combined.log' }),
+            ],
+        });
+
         document.getElementById('signupForm').addEventListener('submit', async function(event) {
             event.preventDefault();
 
@@ -108,7 +121,7 @@
             const phone = event.target.phone.value.trim();
             const csrfToken = event.target.csrfToken.value;
 
-            console.log(`Signup attempt for email: ${email} at ${new Date().toISOString()}`);
+            logger.info('Signup attempt for email: ' + email);
 
             // Clear previous error messages
             const errorContainer = document.getElementById('errorContainer');
@@ -141,6 +154,8 @@
             }
 
             try {
+                const hashedPassword = await bcrypt.hash(password, 10); // 10 salt rounds
+
                 // Send signup data to the server
                 const response = await fetch('/api/signup', {
                     method: 'POST',
@@ -148,7 +163,7 @@
                         'Content-Type': 'application/json',
                         'X-CSRF-Token': csrfToken, // Include CSRF token in headers
                     },
-                    body: JSON.stringify({ email, username, password, phone }),
+                    body: JSON.stringify({ email, username, password: hashedPassword, phone }),
                 });
 
                 if (!response.ok) {
@@ -188,6 +203,12 @@
     const app = express();
     const csrfProtection = csrf({ cookie: true });
 
+    const signupLimiter = rateLimit({
+        windowMs: 15 * 60 * 1000, // 15 minutes
+        max: 5, // Limit each IP to 5 requests per windowMs
+        message: 'Too many signup attempts from this IP, please try again later',
+    });
+
     // Middleware
     app.use(helmet());
     app.use(bodyParser.json());
@@ -209,7 +230,113 @@
     }).then(() => console.log('Connected to MongoDB'))
       .catch((error) => console.error('MongoDB connection error:', error));
 
+    const sendVerificationEmail = async (email, token) => {
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS,
+            },
+        });
+
+        const verificationLink = `https://yourdomain.com/verify-email?token=${token}`;
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: 'Verify Your Email',
+            text: `Click the link to verify your email: ${verificationLink}`,
+        };
+
+        await transporter.sendMail(mailOptions);
+    };
+
+    passport.use(
+        new GoogleStrategy(
+            {
+                clientID: process.env.GOOGLE_CLIENT_ID,
+                clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+                callbackURL: '/auth/google/callback',
+            },
+            async (accessToken, refreshToken, profile, done) => {
+                try {
+                    let user = await User.findOne({ email: profile.emails[0].value });
+                    if (!user) {
+                        user = new User({
+                            email: profile.emails[0].value,
+                            username: profile.displayName,
+                            isVerified: true,
+                        });
+                        await user.save();
+                    }
+                    return done(null, user);
+                } catch (error) {
+                    return done(error, null);
+                }
+            }
+        )
+    );
+
+    app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+    app.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: '/login' }), (req, res) => {
+        res.redirect('/frame_profile.html');
+    });
+
+    app.get('/signup', csrfProtection, (req, res) => {
+        res.render('signup', { csrfToken: req.csrfToken() });
+    });
+
     // Routes and Logic (as shown in previous sections)
+
+    app.post('/api/signup', signupLimiter, async (req, res) => {
+        // Signup logic
+    });
+
+    app.post('/api/reset-password', async (req, res) => {
+        const { email } = req.body;
+
+        try {
+            const user = await User.findOne({ email });
+            if (!user) {
+                return res.status(404).json({ message: 'User not found.' });
+            }
+
+            const resetToken = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: '1h' });
+            await sendVerificationEmail(email, resetToken);
+
+            res.status(200).json({ message: 'Password reset email sent.' });
+        } catch (error) {
+            console.error('Error during password reset:', error);
+            res.status(500).json({ message: 'An error occurred. Please try again.' });
+        }
+    });
+
+    app.post('/api/login', async (req, res) => {
+        const { email, password } = req.body;
+
+        try {
+            const user = await User.findOne({ email });
+            if (!user) {
+                return res.status(404).json({ message: 'User not found.' });
+            }
+
+            const isPasswordValid = await bcrypt.compare(password, user.password);
+            if (!isPasswordValid) {
+                return res.status(401).json({ message: 'Invalid credentials.' });
+            }
+
+            const token = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: '1h' });
+            res.cookie('sessionToken', token, {
+                httpOnly: true,
+                secure: true,
+                sameSite: 'Strict',
+            });
+
+            res.status(200).json({ message: 'Login successful.' });
+        } catch (error) {
+            console.error('Error during login:', error);
+            res.status(500).json({ message: 'An error occurred. Please try again.' });
+        }
+    });
 
     // Start Server
     const PORT = process.env.PORT || 3000;

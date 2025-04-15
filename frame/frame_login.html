@@ -98,22 +98,19 @@
             }
 
             try {
-                // Send credentials to the server for validation
                 const response = await fetch('/api/login', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken, // Include CSRF token in headers
                     },
-                    body: JSON.stringify({ identifier, password, csrfToken }),
+                    body: JSON.stringify({ identifier, password }),
                 });
 
                 if (response.ok) {
-                    const data = await response.json();
-                    // Store a secure session token (e.g., in a secure cookie)
-                    document.cookie = `sessionToken=${data.token}; Secure; HttpOnly; SameSite=Strict`;
                     window.location.href = 'frame_profile.html'; // Redirect to profile
                 } else if (response.status === 401) {
-                    errorContainer.textContent = 'Invalid email/username or password.';
+                    errorContainer.textContent = 'Invalid credentials.';
                 } else {
                     errorContainer.textContent = 'An error occurred. Please try again.';
                 }

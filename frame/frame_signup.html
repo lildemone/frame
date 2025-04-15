@@ -61,22 +61,6 @@
             text-align: center;
             margin-top: 20px;
         }
-        .google-signin-button,
-        .apple-signin-button {
-            display: inline-block;
-            margin: 10px;
-            padding: 10px 20px;
-            font-size: 16px;
-            color: #fff;
-            text-decoration: none;
-            border-radius: 4px;
-        }
-        .google-signin-button {
-            background-color: #4285f4;
-        }
-        .apple-signin-button {
-            background-color: #000;
-        }
     </style>
 </head>
 <body>
@@ -93,8 +77,6 @@
             <button type="submit">Create Account</button>
         </form>
         <div class="oauth-buttons">
-            <a href="/auth/google" class="google-signin-button">Sign in with Google</a>
-            <a href="/auth/apple" class="apple-signin-button">Sign in with Apple</a>
         </div>
     </div>
     <script>
@@ -196,8 +178,6 @@ const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const mongoose = require('mongoose');
 const nodemailer = require('nodemailer');
-const passport = require('passport');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const session = require('express-session');
 
 const app = express();
@@ -213,8 +193,6 @@ app.use(session({
     saveUninitialized: false,
     cookie: { secure: true, httpOnly: true, sameSite: 'Strict' },
 }));
-app.use(passport.initialize());
-app.use(passport.session());
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGO_URI, {
@@ -224,7 +202,7 @@ mongoose.connect(process.env.MONGO_URI, {
 }).then(() => console.log('Connected to MongoDB'))
   .catch((error) => console.error('MongoDB connection error:', error));
 
-// Routes (Signup, Login, OAuth, etc.)
+// Routes (Signup, Login, etc.)
 
 // Start Server
 const PORT = process.env.PORT || 3000;
@@ -234,12 +212,6 @@ app.listen(PORT, () => {
 </script>
 
 <script>
-    GOOGLE_CLIENT_ID=your-google-client-id
-    GOOGLE_CLIENT_SECRET=your-google-client-secret
-    APPLE_CLIENT_ID=your-apple-client-id
-    APPLE_TEAM_ID=your-apple-team-id
-    APPLE_KEY_ID=your-apple-key-id
-    APPLE_PRIVATE_KEY=your-apple-private-key
     JWT_SECRET=your-jwt-secret
     REFRESH_TOKEN_SECRET=your-refresh-token-secret
     EMAIL_USER=your-email

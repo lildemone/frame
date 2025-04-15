@@ -100,16 +100,15 @@
     <script>
 
 const winston = require('winston');
-require('dotenv').config();
 
-        const logger = winston.createLogger({
-            level: 'info',
-            format: winston.format.json(),
-            transports: [
-                new winston.transports.File({ filename: 'error.log', level: 'error' }),
-                new winston.transports.File({ filename: 'combined.log' }),
-            ],
-        });
+const logger = winston.createLogger({
+    level: 'info',
+    format: winston.format.json(),
+    transports: [
+        new winston.transports.File({ filename: 'error.log', level: 'error' }),
+        new winston.transports.File({ filename: 'combined.log' }),
+    ],
+});
 
         document.getElementById('signupForm').addEventListener('submit', async function(event) {
             event.preventDefault();
@@ -284,8 +283,6 @@ require('dotenv').config();
     app.get('/signup', csrfProtection, (req, res) => {
         res.render('signup', { csrfToken: req.csrfToken() });
     });
-
-    // Routes and Logic (as shown in previous sections)
 
     app.post('/api/signup', signupLimiter, async (req, res) => {
         // Signup logic

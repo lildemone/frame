@@ -95,7 +95,14 @@
             // Password validation
             const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
             if (!passwordRegex.test(password)) {
-                errorContainer.textContent = 'Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.';
+                errorContainer.textContent = 'Password must be at least 6 characters long and include lowercase, number, and special character.';
+                return;
+            }
+
+            // Phone number validation
+            const phoneRegex = /^[0-9]{10,15}$/; // Adjust length as needed
+            if (!phoneRegex.test(phone)) {
+                errorContainer.textContent = 'Phone number must contain only digits and be 10-15 characters long.';
                 return;
             }
 

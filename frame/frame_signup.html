@@ -120,8 +120,9 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken, // Include CSRF token in headers
                     },
-                    body: JSON.stringify({ email, username, password, phone, csrfToken }),
+                    body: JSON.stringify({ email, username, password, phone }),
                 });
 
                 if (response.ok) {

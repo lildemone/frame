@@ -85,6 +85,20 @@
         const { body, validationResult } = require('express-validator');
         const bcrypt = require('bcrypt');
         const jwt = require('jsonwebtoken');
+        const csrf = require('csurf');
+        const helmet = require('helmet');
+        const csrfProtection = csrf({ cookie: true });
+
+        app.use(helmet());
+
+        app.use((req, res, next) => {
+            if (req.headers['x-forwarded-proto'] !== 'https') {
+                return res.redirect(`https://${req.headers.host}${req.url}`);
+            }
+            next();
+        });
+
+        app.use(csrfProtection);
 
         const loginLimiter = rateLimit({
             windowMs: 15 * 60 * 1000, // 15 minutes
@@ -94,6 +108,7 @@
 
         app.post(
             '/api/login',
+            csrfProtection,
             [
                 body('identifier').notEmpty().withMessage('Identifier is required'),
                 body('password').notEmpty().withMessage('Password is required'),
@@ -104,20 +119,46 @@
                     return res.status(400).json({ errors: errors.array() });
                 }
 
+                const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+                console.log(`Login attempt from IP: ${ipAddress}`);
+
                 const { identifier, password } = req.body;
 
                 // Fetch stored hashed password from database
                 const storedHashedPassword = await getStoredHashedPassword(identifier);
 
+                const user = await getUserByIdentifier(identifier); // Fetch user details
+
+                if (user.failedLoginAttempts >= 5) {
+                    return res.status(403).json({ message: 'Account locked. Please try again later.' });
+                }
+
+                if (isPasswordExpired(user.lastPasswordChange)) {
+                    return res.status(403).json({ message: 'Password expired. Please reset your password.' });
+                }
+
                 const isPasswordValid = await bcrypt.compare(password, storedHashedPassword);
                 if (!isPasswordValid) {
+                    await incrementFailedLoginAttempts(user.id);
                     return res.status(401).json({ message: 'Invalid credentials' });
                 }
 
-                const user = await getUserByIdentifier(identifier); // Fetch user details
-                const token = jwt.sign({ userId: user.id }, 'your-secret-key', { expiresIn: '1h' });
+                await resetFailedLoginAttempts(user.id);
+
+                const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+                const refreshToken = jwt.sign({ userId: user.id }, process.env.REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
+
+                if (isTokenRevoked(token)) {
+                    return res.status(401).json({ message: 'Token is invalid or expired' });
+                }
 
                 res.cookie('sessionToken', token, {
+                    httpOnly: true,
+                    secure: true,
+                    sameSite: 'Strict',
+                });
+
+                res.cookie('refreshToken', refreshToken, {
                     httpOnly: true,
                     secure: true,
                     sameSite: 'Strict',
@@ -126,6 +167,11 @@
                 res.status(200).json({ message: 'Login successful' });
             }
         );
+
+        app.post('/api/logout', (req, res) => {
+            res.clearCookie('sessionToken');
+            res.status(200).json({ message: 'Logged out successfully' });
+        });
 
         document.getElementById('signinForm').addEventListener('submit', async function(event) {
             event.preventDefault();

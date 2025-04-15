@@ -220,25 +220,46 @@
         function updateAccountTab() {
             const accountTab = document.getElementById('accountTab');
             const logoutButton = document.getElementById('logoutButton');
-            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true'; // Check login status
-            if (isLoggedIn) {
+            const sessionToken = getSessionToken(); // Check if the session token exists
+
+            if (sessionToken) {
                 accountTab.textContent = 'Profile';
                 accountTab.href = 'frame_profile.html'; // Redirect to profile
                 logoutButton.style.display = 'inline-block'; // Show logout button
             } else {
                 accountTab.textContent = 'Account';
-                accountTab.href = 'frame_login.html'; // Redirect to login/sign-up
+                accountTab.href = 'frame_login.html'; // Redirect to login/signup
                 logoutButton.style.display = 'none'; // Hide logout button
             }
         }
 
         function logout() {
-            localStorage.setItem('isLoggedIn', 'false'); // Clear login status
+            document.cookie = 'sessionToken=; Max-Age=0; path=/;'; // Clear session token
             updateAccountTab(); // Update navigation bar
             window.location.href = 'frame_login.html'; // Redirect to login
         }
 
-        document.addEventListener('DOMContentLoaded', updateAccountTab); // Update tab on page load
+        function getSessionToken() {
+            const cookies = document.cookie.split('; ');
+            const sessionCookie = cookies.find(row => row.startsWith('sessionToken='));
+            return sessionCookie ? sessionCookie.split('=')[1] : null;
+        }
+
+        function updateContentVisibility() {
+            const noAccountMessage = document.getElementById('noAccountMessage');
+            const sessionToken = getSessionToken();
+
+            if (sessionToken) {
+                noAccountMessage.style.display = 'none'; // Hide message for logged-in users
+            } else {
+                noAccountMessage.style.display = 'block'; // Show message for guests
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            updateAccountTab(); // Update navigation bar
+            updateContentVisibility(); // Update content visibility
+        });
     </script>
 </head>
 <body>

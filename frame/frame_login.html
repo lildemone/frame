@@ -81,6 +81,52 @@
         <p style="text-align: center; margin-top: 10px;">Don't have an account? <a href="frame_signup.html">Sign Up</a></p>
     </div>
     <script>
+        const rateLimit = require('express-rate-limit');
+        const { body, validationResult } = require('express-validator');
+        const bcrypt = require('bcrypt');
+        const jwt = require('jsonwebtoken');
+
+        const loginLimiter = rateLimit({
+            windowMs: 15 * 60 * 1000, // 15 minutes
+            max: 5, // Limit each IP to 5 requests per windowMs
+            message: 'Too many login attempts from this IP, please try again later',
+        });
+
+        app.post(
+            '/api/login',
+            [
+                body('identifier').notEmpty().withMessage('Identifier is required'),
+                body('password').notEmpty().withMessage('Password is required'),
+            ],
+            async (req, res) => {
+                const errors = validationResult(req);
+                if (!errors.isEmpty()) {
+                    return res.status(400).json({ errors: errors.array() });
+                }
+
+                const { identifier, password } = req.body;
+
+                // Fetch stored hashed password from database
+                const storedHashedPassword = await getStoredHashedPassword(identifier);
+
+                const isPasswordValid = await bcrypt.compare(password, storedHashedPassword);
+                if (!isPasswordValid) {
+                    return res.status(401).json({ message: 'Invalid credentials' });
+                }
+
+                const user = await getUserByIdentifier(identifier); // Fetch user details
+                const token = jwt.sign({ userId: user.id }, 'your-secret-key', { expiresIn: '1h' });
+
+                res.cookie('sessionToken', token, {
+                    httpOnly: true,
+                    secure: true,
+                    sameSite: 'Strict',
+                });
+
+                res.status(200).json({ message: 'Login successful' });
+            }
+        );
+
         document.getElementById('signinForm').addEventListener('submit', async function(event) {
             event.preventDefault();
 
@@ -98,6 +144,7 @@
             }
 
             try {
+                // Send credentials to the server for validation
                 const response = await fetch('/api/login', {
                     method: 'POST',
                     headers: {
@@ -109,10 +156,8 @@
 
                 if (response.ok) {
                     window.location.href = 'frame_profile.html'; // Redirect to profile
-                } else if (response.status === 401) {
-                    errorContainer.textContent = 'Invalid credentials.';
                 } else {
-                    errorContainer.textContent = 'An error occurred. Please try again.';
+                    errorContainer.textContent = 'Invalid credentials.';
                 }
             } catch (error) {
                 console.error('Error during login:', error);

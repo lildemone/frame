@@ -110,6 +110,8 @@ const logger = winston.createLogger({
     ],
 });
 
+require('dotenv').config();
+
         document.getElementById('signupForm').addEventListener('submit', async function(event) {
             event.preventDefault();
 
@@ -184,162 +186,51 @@ const logger = winston.createLogger({
 </html>
 
 <script>
-    require('dotenv').config();
-    const express = require('express');
-    const bodyParser = require('body-parser');
-    const bcrypt = require('bcrypt');
-    const csrf = require('csurf');
-    const jwt = require('jsonwebtoken');
-    const rateLimit = require('express-rate-limit');
-    const helmet = require('helmet');
-    const mongoose = require('mongoose');
-    const nodemailer = require('nodemailer');
-    const passport = require('passport');
-    const GoogleStrategy = require('passport-google-oauth20').Strategy;
-    const AppleStrategy = require('passport-apple');
-    const session = require('express-session');
+require('dotenv').config();
+const express = require('express');
+const bodyParser = require('body-parser');
+const bcrypt = require('bcrypt');
+const csrf = require('csurf');
+const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
+const mongoose = require('mongoose');
+const nodemailer = require('nodemailer');
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const session = require('express-session');
 
-    const app = express();
-    const csrfProtection = csrf({ cookie: true });
+const app = express();
+const csrfProtection = csrf({ cookie: true });
 
-    const signupLimiter = rateLimit({
-        windowMs: 15 * 60 * 1000, // 15 minutes
-        max: 5, // Limit each IP to 5 requests per windowMs
-        message: 'Too many signup attempts from this IP, please try again later',
-    });
+// Middleware
+app.use(helmet());
+app.use(bodyParser.json());
+app.use(csrfProtection);
+app.use(session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: { secure: true, httpOnly: true, sameSite: 'Strict' },
+}));
+app.use(passport.initialize());
+app.use(passport.session());
 
-    // Middleware
-    app.use(helmet());
-    app.use(bodyParser.json());
-    app.use(csrfProtection);
-    app.use(session({
-        secret: process.env.SESSION_SECRET,
-        resave: false,
-        saveUninitialized: false,
-        cookie: { secure: true, httpOnly: true, sameSite: 'Strict' },
-    }));
-    app.use(passport.initialize());
-    app.use(passport.session());
+// MongoDB Connection
+mongoose.connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+    useCreateIndex: true,
+}).then(() => console.log('Connected to MongoDB'))
+  .catch((error) => console.error('MongoDB connection error:', error));
 
-    // MongoDB Connection
-    mongoose.connect(process.env.MONGO_URI, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-        useCreateIndex: true,
-    }).then(() => console.log('Connected to MongoDB'))
-      .catch((error) => console.error('MongoDB connection error:', error));
+// Routes (Signup, Login, OAuth, etc.)
 
-    const sendVerificationEmail = async (email, token) => {
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS,
-            },
-        });
-
-        const verificationLink = `https://yourdomain.com/verify-email?token=${token}`;
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: email,
-            subject: 'Verify Your Email',
-            text: `Click the link to verify your email: ${verificationLink}`,
-        };
-
-        await transporter.sendMail(mailOptions);
-    };
-
-    passport.use(
-        new GoogleStrategy(
-            {
-                clientID: process.env.GOOGLE_CLIENT_ID,
-                clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-                callbackURL: '/auth/google/callback',
-            },
-            async (accessToken, refreshToken, profile, done) => {
-                try {
-                    let user = await User.findOne({ email: profile.emails[0].value });
-                    if (!user) {
-                        user = new User({
-                            email: profile.emails[0].value,
-                            username: profile.displayName,
-                            isVerified: true,
-                        });
-                        await user.save();
-                    }
-                    return done(null, user);
-                } catch (error) {
-                    return done(error, null);
-                }
-            }
-        )
-    );
-
-    app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
-    app.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: '/login' }), (req, res) => {
-        res.redirect('/frame_profile.html');
-    });
-
-    app.get('/signup', csrfProtection, (req, res) => {
-        res.render('signup', { csrfToken: req.csrfToken() });
-    });
-
-    app.post('/api/signup', signupLimiter, async (req, res) => {
-        // Signup logic
-    });
-
-    app.post('/api/reset-password', async (req, res) => {
-        const { email } = req.body;
-
-        try {
-            const user = await User.findOne({ email });
-            if (!user) {
-                return res.status(404).json({ message: 'User not found.' });
-            }
-
-            const resetToken = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: '1h' });
-            await sendVerificationEmail(email, resetToken);
-
-            res.status(200).json({ message: 'Password reset email sent.' });
-        } catch (error) {
-            console.error('Error during password reset:', error);
-            res.status(500).json({ message: 'An error occurred. Please try again.' });
-        }
-    });
-
-    app.post('/api/login', async (req, res) => {
-        const { email, password } = req.body;
-
-        try {
-            const user = await User.findOne({ email });
-            if (!user) {
-                return res.status(404).json({ message: 'User not found.' });
-            }
-
-            const isPasswordValid = await bcrypt.compare(password, user.password);
-            if (!isPasswordValid) {
-                return res.status(401).json({ message: 'Invalid credentials.' });
-            }
-
-            const token = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: '1h' });
-            res.cookie('sessionToken', token, {
-                httpOnly: true,
-                secure: true,
-                sameSite: 'Strict',
-            });
-
-            res.status(200).json({ message: 'Login successful.' });
-        } catch (error) {
-            console.error('Error during login:', error);
-            res.status(500).json({ message: 'An error occurred. Please try again.' });
-        }
-    });
-
-    // Start Server
-    const PORT = process.env.PORT || 3000;
-    app.listen(PORT, () => {
-        console.log(`Server is running on port ${PORT}`);
-    });
+// Start Server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});
 </script>
 
 <script>

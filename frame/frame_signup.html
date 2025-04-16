@@ -80,20 +80,6 @@
         </div>
     </div>
     <script>
-
-const winston = require('winston');
-
-const logger = winston.createLogger({
-    level: 'info',
-    format: winston.format.json(),
-    transports: [
-        new winston.transports.File({ filename: 'error.log', level: 'error' }),
-        new winston.transports.File({ filename: 'combined.log' }),
-    ],
-});
-
-require('dotenv').config();
-
         document.getElementById('signupForm').addEventListener('submit', async function(event) {
             event.preventDefault();
 
@@ -104,47 +90,20 @@ require('dotenv').config();
             const phone = event.target.phone.value.trim();
             const csrfToken = event.target.csrfToken.value;
 
-            logger.info('Signup attempt for email: ' + email);
-
-            // Clear previous error messages
             const errorContainer = document.getElementById('errorContainer');
             errorContainer.textContent = '';
 
-            // Basic validation
-            if (!email || !username || !password || !confirmPassword || !phone) {
-                errorContainer.textContent = 'All fields are required.';
-                return;
-            }
-
-            // Password match validation
             if (password !== confirmPassword) {
                 errorContainer.textContent = 'Passwords do not match.';
                 return;
             }
 
-            // Password strength validation
-            const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-            if (!passwordRegex.test(password)) {
-                errorContainer.textContent = 'Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.';
-                return;
-            }
-
-            // Phone number validation
-            const phoneRegex = /^[0-9]{10,15}$/; // Adjust length as needed
-            if (!phoneRegex.test(phone)) {
-                errorContainer.textContent = 'Phone number must contain only digits and be 10-15 characters long.';
-                return;
-            }
-
             try {
-                const hashedPassword = await bcrypt.hash(password, 10); // 10 salt rounds
-
-                // Send signup data to the server
                 const response = await fetch('/api/signup', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-Token': csrfToken, // Include CSRF token in headers
+                        'X-CSRF-Token': csrfToken,
                     },
                     body: JSON.stringify({ email, username, password, phone }),
                 });
@@ -155,9 +114,7 @@ require('dotenv').config();
                     return;
                 }
 
-                if (response.ok) {
-                    window.location.href = 'frame_profile.html'; // Redirect to profile
-                }
+                window.location.href = 'frame_profile.html'; // Redirect to profile
             } catch (error) {
                 console.error('Error during signup:', error);
                 errorContainer.textContent = 'An error occurred. Please try again.';
@@ -170,47 +127,31 @@ require('dotenv').config();
 <script>
 require('dotenv').config();
 const express = require('express');
-const bodyParser = require('body-parser');
-const bcrypt = require('bcrypt');
-const csrf = require('csurf');
-const jwt = require('jsonwebtoken');
-const rateLimit = require('express-rate-limit');
-const helmet = require('helmet');
 const mongoose = require('mongoose');
-const nodemailer = require('nodemailer');
-const session = require('express-session');
+const bcrypt = require('bcrypt');
 const { body, validationResult } = require('express-validator');
 
 const app = express();
-const csrfProtection = csrf({ cookie: true });
-
-// Middleware
-app.use(helmet());
-app.use(bodyParser.json());
-app.use(csrfProtection);
-app.use(session({
-    secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    cookie: { secure: true, httpOnly: true, sameSite: 'Strict' },
-}));
-
-app.use((req, res, next) => {
-    if (req.headers['x-forwarded-proto'] !== 'https') {
-        return res.redirect(`https://${req.headers.host}${req.url}`);
-    }
-    next();
-});
+app.use(express.json());
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
-    useCreateIndex: true,
-}).then(() => console.log('Connected to MongoDB'))
+}).then(() => console.log('Connected to MongoDB Atlas'))
   .catch((error) => console.error('MongoDB connection error:', error));
 
-// Routes (Signup, Login, etc.)
+// User Schema
+const userSchema = new mongoose.Schema({
+    email: { type: String, required: true, unique: true },
+    username: { type: String, required: true },
+    password: { type: String, required: true },
+    phone: { type: String, required: true },
+});
+
+const User = mongoose.model('User', userSchema);
+
+// Signup Route
 app.post(
     '/api/signup',
     [
@@ -228,17 +169,19 @@ app.post(
             return res.status(400).json({ errors: errors.array() });
         }
 
-        // Proceed with signup logic
         try {
             const { email, username, password, phone } = req.body;
 
+            // Check if the user already exists
             const existingUser = await User.findOne({ email });
             if (existingUser) {
                 return res.status(400).json({ message: 'Email is already registered.' });
             }
 
+            // Hash the password
             const hashedPassword = await bcrypt.hash(password, 10);
 
+            // Save the user to the database
             const user = new User({
                 email,
                 username,
@@ -268,5 +211,5 @@ app.listen(PORT, () => {
     EMAIL_USER=your-email
     EMAIL_PASS=your-email-password
     SESSION_SECRET=your-session-secret
-    MONGO_URI=mongodb+srv//username:password@cluster.mongodb.net/your-database
+    MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/your-database
 </script>

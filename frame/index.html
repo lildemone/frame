@@ -242,7 +242,13 @@
         function getSessionToken() {
             const cookies = document.cookie.split('; ');
             const sessionCookie = cookies.find(row => row.startsWith('sessionToken='));
-            return sessionCookie ? sessionCookie.split('=')[1] : null;
+            const token = sessionCookie ? sessionCookie.split('=')[1] : null;
+
+            // Validate token format (e.g., JWT structure)
+            if (token && /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/.test(token)) {
+                return token;
+            }
+            return null;
         }
 
         function updateContentVisibility() {
@@ -259,6 +265,22 @@
         document.addEventListener('DOMContentLoaded', () => {
             updateAccountTab(); // Update navigation bar
             updateContentVisibility(); // Update content visibility
+            document.getElementById('logoutButton').addEventListener('click', logout);
+        });
+
+        function setSessionToken(res, token) {
+            res.cookie('sessionToken', token, {
+                httpOnly: true,
+                secure: true, // Use only over HTTPS
+                sameSite: 'Strict',
+            });
+        }
+
+        app.use((req, res, next) => {
+            if (req.headers['x-forwarded-proto'] !== 'https') {
+                return res.redirect(`https://${req.headers.host}${req.url}`);
+            }
+            next();
         });
     </script>
 </head>
@@ -274,7 +296,7 @@
         <a href="frame_services.html" target="content">Services</a>
         <a href="frame_contacts.html" target="content">Contact</a>
         <a id="accountTab" href="frame_login.html" target="content">Account</a> <!-- Dynamic tab -->
-        <button id="logoutButton" onclick="logout()" style="display: none; margin-left: 10px; background-color: #ff5722; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 5px;">Logout</button>
+        <button id="logoutButton" style="display: none; margin-left: 10px; background-color: #ff5722; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 5px;">Logout</button>
     </div>
     <button class="toggle-button" onclick="toggleMenu()">☰</button>
     <div class="main">
@@ -287,7 +309,11 @@
         <div class="content">
             <iframe src="frame_content.html" name="content" style="width: 100%; height: 100vh; border: none;"></iframe>
             <div id="noAccountMessage" style="text-align: center; margin-top: 20px;">
-                <p>If you don't have an account, please <a href="frame_signup.html" target="content">Sign Up</a> or <a href="frame_login.html" target="content">Login</a>.</p>
+                <p>If you don't have an account, please 
+                    <a href="frame_signup.html" target="content" rel="noopener">Sign Up</a>
+                    or 
+                    <a href="frame_login.html" target="content" rel="noopener">Login</a>.
+                </p>
             </div> <!-- Added conditional message -->
         </div>
     </div>

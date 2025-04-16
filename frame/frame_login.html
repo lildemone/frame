@@ -73,7 +73,7 @@
         <h1>Login</h1>
         <form id="signinForm">
             <div id="errorContainer" class="error-message"></div>
-            <input type="hidden" name="csrfToken" value="your-csrf-token-here">
+            <input type="hidden" name="csrfToken" value="<%= csrfToken %>">
             <input type="text" name="identifier" placeholder="Email or Username" required>
             <input type="password" name="password" placeholder="Password" required>
             <button type="submit">Sign In</button>
@@ -88,6 +88,7 @@
         const { body, validationResult } = require('express-validator');
         const csrf = require('csurf');
         const helmet = require('helmet');
+        const crypto = require('crypto');
         const csrfProtection = csrf({ cookie: true });
 
         // MongoDB Connection
@@ -119,7 +120,20 @@
 
         const LoginLog = mongoose.model('LoginLog', loginLogSchema);
 
-        app.use(helmet());
+        app.use(helmet({
+            contentSecurityPolicy: {
+                directives: {
+                    defaultSrc: ["'self'"],
+                    scriptSrc: ["'self'", "'unsafe-inline'"],
+                    styleSrc: ["'self'", 'https://fonts.googleapis.com'],
+                    fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+                },
+            },
+            hsts: {
+                maxAge: 31536000, // 1 year
+                includeSubDomains: true,
+            },
+        }));
 
         app.use((req, res, next) => {
             if (req.headers['x-forwarded-proto'] !== 'https') {
@@ -130,10 +144,21 @@
 
         app.use(csrfProtection);
 
+        const globalLimiter = rateLimit({
+            windowMs: 15 * 60 * 1000, // 15 minutes
+            max: 100, // Limit each IP to 100 requests per windowMs
+            message: 'Too many requests from this IP, please try again later',
+        });
+        app.use(globalLimiter);
+
         const loginLimiter = rateLimit({
             windowMs: 15 * 60 * 1000, // 15 minutes
             max: 5, // Limit each IP to 5 requests per windowMs
             message: 'Too many login attempts from this IP, please try again later',
+        });
+
+        app.get('/login', (req, res) => {
+            res.render('login', { csrfToken: req.csrfToken() });
         });
 
         // Login Route
@@ -152,7 +177,14 @@
 
                 // Check if the account is locked
                 if (user.failedLoginAttempts >= 5) {
-                    return res.status(403).json({ message: 'Account locked. Please try again later.' });
+                    const lockoutTime = 30 * 60 * 1000; // 30 minutes
+                    const timeSinceLastAttempt = Date.now() - user.lastFailedLogin.getTime();
+
+                    if (timeSinceLastAttempt < lockoutTime) {
+                        return res.status(403).json({ message: 'Account locked. Please try again later.' });
+                    } else {
+                        user.failedLoginAttempts = 0; // Reset failed attempts after lockout period
+                    }
                 }
 
                 // Validate password
@@ -183,7 +215,7 @@
                 // Set cookies
                 res.cookie('sessionToken', token, {
                     httpOnly: true,
-                    secure: true,
+                    secure: true, // Use only over HTTPS
                     sameSite: 'Strict',
                 });
 
@@ -195,9 +227,12 @@
 
                 const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
 
+                const encryptedIpAddress = crypto.createCipher('aes-256-cbc', process.env.ENCRYPTION_KEY)
+                    .update(ipAddress, 'utf8', 'hex') + cipher.final('hex');
+
                 const log = new LoginLog({
                     userId: user._id,
-                    ipAddress,
+                    ipAddress: encryptedIpAddress,
                     status: 'SUCCESS',
                 });
                 await log.save();
@@ -209,19 +244,28 @@
             }
         });
 
-        app.post('/api/logout', (req, res) => {
+        app.post('/api/logout', csrfProtection, (req, res) => {
             res.clearCookie('sessionToken');
             res.status(200).json({ message: 'Logged out successfully' });
+        });
+
+        document.getElementById('signinForm').addEventListener('submit', function(event) {
+            const password = event.target.password.value.trim();
+            const errorContainer = document.getElementById('errorContainer');
+
+            if (password.length < 8 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password) || !/[@$!%*?&]/.test(password)) {
+                errorContainer.textContent = 'Password must include uppercase, lowercase, number, and special character.';
+                event.preventDefault();
+            }
         });
 
         document.getElementById('signinForm').addEventListener('submit', async function(event) {
             event.preventDefault();
 
-            const identifier = event.target.identifier.value.trim(); // Can be email or username
+            const identifier = event.target.identifier.value.trim();
             const password = event.target.password.value.trim();
             const csrfToken = event.target.csrfToken.value;
 
-            // Clear previous error messages
             const errorContainer = document.getElementById('errorContainer');
             errorContainer.textContent = '';
 
@@ -231,18 +275,17 @@
             }
 
             try {
-                // Send credentials to the server for validation
                 const response = await fetch('/api/login', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-Token': csrfToken, // Include CSRF token in headers
+                        'X-CSRF-Token': csrfToken,
                     },
                     body: JSON.stringify({ identifier, password }),
                 });
 
                 if (response.ok) {
-                    window.location.href = 'frame_profile.html'; // Redirect to profile
+                    window.location.href = 'frame_profile.html';
                 } else {
                     const errorData = await response.json();
                     errorContainer.textContent = errorData.message || 'Invalid credentials.';
